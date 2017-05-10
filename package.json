@@ -1,0 +1,21 @@
+{
+  "name": "nodechat",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "websocket": "^1.0.24"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.24.1"
+  },
+  "scripts": {
+    "build": "./node_modules/babel-cli/bin/babel.js -d build src",
+    "start": "node start.js --harmony"
+  }
+}
