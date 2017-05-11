@@ -1,4 +1,5 @@
 import Client from './classes/Client.class';
+import Channel from './classes/Channel.class';
 import url from 'url';
 
 export default class {
@@ -38,16 +39,18 @@ export default class {
     }
 
     const id = queryParams.id;
+    let client = null;
 
     if (id in this.clients) {
-      let client = this.clients[id];
-      await sendToChannel(client, 'Двойная авторизация!');
+      client = this.clients[id];
+      await this.sendToChannel(client, 'Двойная авторизация!');
     } else {
-      let client = new Client(id);
+      client = new Client(id);
     }
 
     if (!this.channels.has(client)) {
       let channel = new Channel();
+      this.channelToClients.set(channel, new Set([client]));
       this.channels.set(client, channel);
     }
 
@@ -56,9 +59,8 @@ export default class {
     this.clients[id] = client;
 
     // Двусторонняя привязка объекта клиента к коннету
-    this.connectToClient.set(connect, client);
-    this.clientToConnect.set(client, connect);
-
+    this.connectToClient.set(connection, client);
+    this.clientToConnect.set(client, connection);
 
     console.log((new Date()) + ' Connection accepted.');
   }
@@ -71,23 +73,30 @@ export default class {
 
   onClose(connect, code, message) {
     // onClose [ connect, 1006, 'Connection dropped by remote peer.']
+    const client = this.connectToClient.get(connect);
   }
 
   onMessage(connect, message) {
     // onMessage [ connect, { type: 'utf8', utf8Data: string } ]
+    const sender = this.connectToClient.get(connect);
   }
 
   async sendToChannel(channelIdentifier, message) {
-    let channel = this.channels.get(channelIdentifier);
-    this.channelToClients.get(channel).forEach((client) => {
-      return this.send(this.clientToConnect(client), message);
-    })
+    const channel = this.channels.get(channelIdentifier);
+    const clients = this.channelToClients.get(channel);
+
+    let result = [];
+    clients.forEach((client) => {
+      result.push(this.send(this.clientToConnect.get(client), message));
+    });
+
+    return Promise.all(result);
   }
 
   send(connection, message) {
     return new Promise(function(resolv, reject) {
       try {
-        connection.sendUTF(JSON.serialize(message));
+        connection.sendUTF(JSON.stringify(message));
         resolv();
       } catch (e) {
         reject(e);

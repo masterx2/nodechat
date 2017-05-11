@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+require('babel-polyfill');
+
 const WebSocketServer = require('websocket').server;
 const http = require('http');
 const CoordinationServer = require('./build/CoordinationServer').default;
@@ -14,7 +16,7 @@ server.listen(8080, function() {
   console.log((new Date()) + ' Server is listening on port 8080');
 });
 
-const CS = new CoordinationServer({
+new CoordinationServer({
   wsServer: new WebSocketServer({
     httpServer: server,
     autoAcceptConnections: false
