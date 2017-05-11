@@ -2,7 +2,7 @@
 
 const WebSocketServer = require('websocket').server;
 const http = require('http');
-const CoordinationServer = require('./build/CoordinationServer');
+const CoordinationServer = require('./build/CoordinationServer').default;
 
 const server = http.createServer(function(request, response) {
   console.log((new Date()) + ' Received request for ' + request.url);

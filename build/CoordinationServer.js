@@ -1,7 +1,27 @@
-import Client from './classes/Client.class';
+'use strict';
 
-export default class {
-  constructor(config) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _Client = require('./classes/Client.class');
+
+var _Client2 = _interopRequireDefault(_Client);
+
+var _url = require('url');
+
+var _url2 = _interopRequireDefault(_url);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+  function _class(config) {
+    _classCallCheck(this, _class);
+
     // Подключенные клиенты {clientId: client}
     this.clients = {};
     // Привязка коннекта к клиенту {connect: client}
@@ -16,67 +36,98 @@ export default class {
     if (!('wsServer' in config)) {
       throw new Error('А где сервер вебсокетов?');
     }
-
     this.wsServer = config.wsServer;
-    this.wsServer.on('request', this.onRequest);
+    this.wsServer.on('request', this.onRequest.bind(this));
     this.wsServer.on('connect', this.onConnect.bind(this));
     this.wsServer.on('close', this.onClose);
   }
 
-  onRequest(request) {
-    var connection = request.accept(null, request.origin);
-    console.log(new Date() + ' Connection accepted.');
-  }
+  // Тут происходит авторизация, проверка подлинности, создание(загрузка) клиента
+  // все линьковки связанные с клиентом и коннектом, проверка двойной авторизации
 
-  async onConnect(connection, id) {
-    connection.on('message', message => {
-      this.onMessage(connection, message);
-    });
 
-    if (id in this.clients) {
-      let client = this.clients[id];
-      await sendToChannel(client, 'double auth!');
-    } else {
-      let client = new Client(id);
-    }
+  _createClass(_class, [{
+    key: 'onRequest',
+    value: async function onRequest(request) {
 
-    if (!this.channels.has(client)) {
-      let channel = new Channel();
-      this.channels.set(client, channel);
-    }
+      var queryParams = _url2.default.parse(request.httpRequest.url, true).query;
+      var connection = request.accept(null, request.origin);
 
-    // Добавляем или обновляем клиента в
-    // списке подключенных
-    this.clients[id] = client;
-
-    // Двусторонняя привязка объекта клиента к коннету
-    this.connectToClient.set(connect, client);
-    this.clientToConnect.set(client, connect);
-  }
-
-  onClose(connect, code, message) {
-    // onClose [ connect, 1006, 'Connection dropped by remote peer.']
-  }
-
-  onMessage(connect, message) {
-    // onMessage [ connect, { type: 'utf8', utf8Data: string } ]
-  }
-
-  async sendToChannel(channelIdentifier, message) {
-    let channel = this.channels.get(channelIdentifier);
-    this.channelToClients.get(channel).forEach(client => {
-      return this.send(this.clientToConnect(client), message);
-    });
-  }
-
-  send(connection, message) {
-    return new Promise(function (resolv, reject) {
-      try {
-        connection.sendUTF(JSON.serialize(message));
-        resolv();
-      } catch (e) {
-        reject(e);
+      // Идентификация по get параметру id, если его нет то закрываем соединение и заканчиваем
+      // при таком завершении клиент не выкинет исключения, закрытие необходимо поймать событием
+      if (!queryParams.id) {
+        connection.drop(1000, 'Без ID ты не пройдёшь');
+        return;
       }
-    });
-  }
-}
+
+      var id = queryParams.id;
+
+      if (id in this.clients) {
+        var _client = this.clients[id];
+        await sendToChannel(_client, 'Двойная авторизация!');
+      } else {
+        var _client2 = new _Client2.default(id);
+      }
+
+      if (!this.channels.has(client)) {
+        var channel = new Channel();
+        this.channels.set(client, channel);
+      }
+
+      // Добавляем или обновляем клиента в
+      // списке подключенных
+      this.clients[id] = client;
+
+      // Двусторонняя привязка объекта клиента к коннету
+      this.connectToClient.set(connect, client);
+      this.clientToConnect.set(client, connect);
+
+      console.log(new Date() + ' Connection accepted.');
+    }
+  }, {
+    key: 'onConnect',
+    value: async function onConnect(connection) {
+      var _this = this;
+
+      connection.on('message', function (message) {
+        _this.onMessage(connection, message);
+      });
+    }
+  }, {
+    key: 'onClose',
+    value: function onClose(connect, code, message) {
+      // onClose [ connect, 1006, 'Connection dropped by remote peer.']
+    }
+  }, {
+    key: 'onMessage',
+    value: function onMessage(connect, message) {
+      // onMessage [ connect, { type: 'utf8', utf8Data: string } ]
+    }
+  }, {
+    key: 'sendToChannel',
+    value: async function sendToChannel(channelIdentifier, message) {
+      var _this2 = this;
+
+      var channel = this.channels.get(channelIdentifier);
+      this.channelToClients.get(channel).forEach(function (client) {
+        return _this2.send(_this2.clientToConnect(client), message);
+      });
+    }
+  }, {
+    key: 'send',
+    value: function send(connection, message) {
+      return new Promise(function (resolv, reject) {
+        try {
+          connection.sendUTF(JSON.serialize(message));
+          resolv();
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+  }]);
+
+  return _class;
+}();
+
+exports.default = _class;

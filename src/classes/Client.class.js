@@ -1,5 +1,5 @@
 export default class {
-	construct(id) {
+	constructor(id) {
 		this.id = id;
 	}
 }

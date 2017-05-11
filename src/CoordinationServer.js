@@ -1,4 +1,5 @@
 import Client from './classes/Client.class';
+import url from 'url';
 
 export default class {
   constructor(config) {
@@ -16,26 +17,31 @@ export default class {
     if (!('wsServer' in config)) {
       throw new Error('А где сервер вебсокетов?');
     }
-
     this.wsServer = config.wsServer;
-    this.wsServer.on('request', this.onRequest);
+    this.wsServer.on('request', this.onRequest.bind(this));
     this.wsServer.on('connect', this.onConnect.bind(this));
     this.wsServer.on('close', this.onClose);
   }
 
-  onRequest(request) {
-    var connection = request.accept(null, request.origin);
-    console.log((new Date()) + ' Connection accepted.');
-  }
+  // Тут происходит авторизация, проверка подлинности, создание(загрузка) клиента
+  // все линьковки связанные с клиентом и коннектом, проверка двойной авторизации
+  async onRequest(request) {
 
-  async onConnect(connection, id) {
-    connection.on('message', (message) => {
-      this.onMessage(connection, message);
-    });
+    const queryParams = url.parse(request.httpRequest.url, true).query;
+    const connection = request.accept(null, request.origin);
+
+    // Идентификация по get параметру id, если его нет то закрываем соединение и заканчиваем
+    // при таком завершении клиент не выкинет исключения, закрытие необходимо поймать событием
+    if (!queryParams.id) {
+      connection.drop(1000, 'Без ID ты не пройдёшь');
+      return;
+    }
+
+    const id = queryParams.id;
 
     if (id in this.clients) {
       let client = this.clients[id];
-      await sendToChannel(client, 'double auth!');
+      await sendToChannel(client, 'Двойная авторизация!');
     } else {
       let client = new Client(id);
     }
@@ -52,6 +58,15 @@ export default class {
     // Двусторонняя привязка объекта клиента к коннету
     this.connectToClient.set(connect, client);
     this.clientToConnect.set(client, connect);
+
+
+    console.log((new Date()) + ' Connection accepted.');
+  }
+
+  async onConnect(connection) {
+    connection.on('message', (message) => {
+      this.onMessage(connection, message);
+    });
   }
 
   onClose(connect, code, message) {
