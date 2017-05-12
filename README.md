@@ -10,7 +10,8 @@
 - [ ] Create and manage custom channels
 - [ ] Service channels
 - [ ] Channel types
-- [ ] Restrictions to channesl and clients
+- [ ] Restrictions to channels and clients
+- [ ] Private messages
 
 ## ServiceOrbiter
 
